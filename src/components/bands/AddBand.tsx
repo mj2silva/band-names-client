@@ -1,16 +1,25 @@
-import { ChangeEventHandler, FC, FormEventHandler, useState } from "react";
+import {
+  ChangeEventHandler,
+  FC,
+  FormEventHandler,
+  useContext,
+  useState,
+} from "react";
+import { SocketContext } from "../../socket/SocketProvider";
 
-interface Props {
-  createFunction: (bandName: string) => void;
-}
-
-const AddBand: FC<Props> = ({ createFunction }) => {
+const AddBand: FC = () => {
+  const { socket } = useContext(SocketContext);
   const [bandName, setBandName] = useState("");
+
+  const createBand = (bandName: string) => {
+    if (!socket) return;
+    socket.emit("create-band", { bandName });
+  };
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault();
     if (bandName.trim().length > 0) {
-      createFunction(bandName);
+      createBand(bandName);
       setBandName("");
     }
   };

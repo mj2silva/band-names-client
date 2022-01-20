@@ -1,24 +1,35 @@
-import { ChangeEventHandler, FC, useEffect, useState } from "react";
-import { Band } from "../../App";
+import { ChangeEventHandler, FC, useContext, useEffect, useState } from "react";
+import { SocketContext } from "../../socket/SocketProvider";
+import { Band } from "./types";
 
-interface Props {
-  bands: Band[];
-  voteFunction: (id: string) => void;
-  deleteFunction: (id: string) => void;
-  updateFunction: (id: string, name: string) => void;
-}
-
-const BandList: FC<Props> = ({
-  bands,
-  voteFunction,
-  deleteFunction,
-  updateFunction,
-}) => {
-  const [currentBands, setCurrentBands] = useState(bands);
+const BandList: FC = () => {
+  const { socket } = useContext(SocketContext);
+  const [currentBands, setCurrentBands] = useState<Band[]>();
 
   useEffect(() => {
-    setCurrentBands(bands);
-  }, [bands]);
+    if (!socket) return;
+    socket.on("current-bands", (data) => {
+      setCurrentBands(data.bands);
+    });
+    return () => {
+      socket.off("current-bands");
+    };
+  }, [socket]);
+
+  const voteBand = (bandId: string) => {
+    if (!socket) return;
+    socket.emit("vote-band", { bandId });
+  };
+
+  const deleteBand = (bandId: string) => {
+    if (!socket) return;
+    socket.emit("delete-band", { bandId });
+  };
+
+  const updateBand = (bandId: string, bandName: string) => {
+    if (!socket) return;
+    socket.emit("update-band", { bandId, bandName });
+  };
 
   return (
     <>
@@ -32,12 +43,12 @@ const BandList: FC<Props> = ({
           </tr>
         </thead>
         <tbody>
-          {currentBands.map((currentBand) => {
+          {currentBands?.map((currentBand) => {
             const handleChange: ChangeEventHandler<HTMLInputElement> = (
               event
             ) => {
               setCurrentBands((bands) =>
-                bands.map((band) =>
+                bands?.map((band) =>
                   band.id === currentBand.id
                     ? { ...currentBand, name: event.target.value }
                     : band
@@ -46,7 +57,7 @@ const BandList: FC<Props> = ({
             };
 
             const handleBlur = () => {
-              updateFunction(currentBand.id, currentBand.name);
+              updateBand(currentBand.id, currentBand.name);
             };
 
             return (
@@ -54,7 +65,7 @@ const BandList: FC<Props> = ({
                 <td>
                   <button
                     className="btn btn-primary"
-                    onClick={() => voteFunction(currentBand.id)}
+                    onClick={() => voteBand(currentBand.id)}
                   >
                     +1
                   </button>
@@ -71,7 +82,7 @@ const BandList: FC<Props> = ({
                 <td>
                   <button
                     className="btn btn-danger"
-                    onClick={() => deleteFunction(currentBand.id)}
+                    onClick={() => deleteBand(currentBand.id)}
                   >
                     Delete
                   </button>
